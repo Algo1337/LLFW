@@ -6,16 +6,14 @@ public fn monitor(firewall_t fw)
     fw->running = 1;
 
     string data = _EXTERNAL_;
-    
     while(fw->running != 0)
     {
-        int sz = 1024;
-        int bytes = __syscall__(fw->socket->fd, (long)data, 1023, -1, -1, -1, _SYS_READ);
+        int bytes = __syscall__(fw->socket->fd, (long)data, fw->socket->buff_len, -1, -1, -1, _SYS_READ);
+        if(bytes <= 0)
+            continue;
 
-        if(bytes > 0) {
-            parse_request(fw, data, bytes);
-        }
-
+        parse_request(fw, data, bytes);
+        fw->pps += bytes;
         fw->ticks++;
     }
 }
@@ -143,28 +141,24 @@ public bool check_request(firewall_t fw, conn_t c, string buff)
         /* ENSURE IP IS NOT ALREADY BLOCKED (fw->blocked) */
         if(array_contains_str(fw->blocked, sip) > -1)
         {
-            /*
-                - BLOCK IP
 
-                DROP IP CONNECTIONS; conntrack -D -s 1.2.3.4
-                BLOCK FUTURE IP REQ; 
-                    iptables -A INPUT -s 1.2.3.4 -j DROP
-                    iptables -A OUTPUT -d 1.2.3.4 -j DROP
-            */
         }
 
         _printf("IP Blocked: %s\n", dip)
         return 1;
     }
 
-    
-
-    // More protction checks
-
     u32 *payload = ip + IP_HDR_LEN;
+    // int payload_sz = c->length - (c->buffer - c->payload);
+    
+    // Method Checking and Blocking here....
+    // specific methods include special formats, sometimes following custom TCP protocol(s)
+    // check_dd0s_methods();
+
+    // Validate further data...
 
     pfree(sip, 1);
     pfree(dip, 1);
 
     return 0;
-}
+}`
