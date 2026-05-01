@@ -27,7 +27,7 @@ public int entry(int argc, string argv[])
     firewall_t fw = init_firewall(NULL, 1);
     toggle_protection(fw);
 
-    if(array_contains_str((array)__ARGV__, "--help"))
+    if(array_contains_str((array)__ARGV__, "--help") > -1)
         println(HELP_LIST), __exit(0);
 
     int pos = 0;
