@@ -1,18 +1,25 @@
 #include "src/init.h"
 
-string args[100 * 8];
-
 public string HELP_LIST = "   Name           Description\r\n"
 "______________________________________\r\n"
 "   --serv_ip      Provide the server IP to protect\r\n"
 "   --myip         You're IP to whitlist\r\n"
 "   --debug        Enable debug mode\r\n";
 
+thread cli_thr;
+
 public fn term_cli();
 
 public int entry(int argc, string argv[])
 {
-    mem_cpy(args, argv, 8 * argc);
+    char args[argc][1024];
+    for(int i = 0; i < argc; i++)
+    {
+        int sz = __get_size__(argv[i]);
+        mem_cpy(args[i], argv[i], sz);
+        args[i][sz] = '\0';
+    }
+
     uninit_mem();
     set_heap_sz(526870912);
     init_mem();
@@ -20,19 +27,25 @@ public int entry(int argc, string argv[])
     toggle_protection(fw);
 
     int pos = 0;
-    // if(array_contains_str((array)args, "--debug"))
-    //     toggle_debug_mode();
 
-    if((pos = array_contains_str((array)args, "--serv_ip")) > -1)
-        fw->system_ip = str_dup(args[pos + 1]);
+    printi(argc), println(NULL);
+    for(int i = 0; i < argc; i++)
+    {
+        println(args[i]);
+        if(str_cmp(args[i], "--debug"))
+            toggle_debug_mode();
 
-    if((pos = array_contains_str((array)args, "--myip")) > -1)
-        whitlist_ip(fw, args[pos + 1]);
+        if(str_cmp(args[i], "--serv_ip"))
+            fw->system_ip = str_dup(args[i + 1]);
+
+        if(str_cmp(args[i], "--myip"))
+            whitlist_ip(fw, args[pos + 1]);
+    }
 
     _printf("Socket: %d\n", (void *)&fw->socket->fd);
 
-    thread t = create_thread((handler_t)monitor, fw, 0);
-    start_thread(t);
+    cli_thr = create_thread((handler_t)monitor, fw, 0);
+    start_thread(cli_thr);
 
     term_cli();
     return 0;
@@ -52,6 +65,9 @@ public fn term_cli()
             println("working");
         } else if(str_cmp(INPUT, "geo")) {
             println("Working 2");
+        } else if(mem_cmp(INPUT, "q", 1)) {
+            thread_kill(&cli_thr);
+            __exit(0);
         }
     }
 }
