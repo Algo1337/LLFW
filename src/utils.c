@@ -29,6 +29,6 @@ public fn print_ip(unsigned int ip)
     printi(b[3]);
 }
 
-string create_drop_cmd(string ip) {
-    // string cmd = init_str();
+public string create_drop_cmd(string ip) {
+    string cmd = allocate(0, 10);
 }
