@@ -1,9 +1,14 @@
 #include "src/init.h"
 
-public string HELP_LIST = "   Name           Description\r\n"
+public string BANNER = "╔═╗╦ ╦╔╗ ╔═╗╦═╗  ╔═╗╦ ╦╦╔═╗╦  ╔╦╗\r\n"
+"║  ╚╦╝╠╩╗║╣ ╠╦╝  ╚═╗╠═╣║║╣ ║   ║║\r\n"
+"╚═╝ ╩ ╚═╝╚═╝╩╚═  ╚═╝╩ ╩╩╚═╝╩═╝═╩╝\r\n";
+
+public string HELP_LIST = "CyberShield | Version: v8.2 | By: @Algo1337"
+"   Flag           Description\r\n"
 "______________________________________\r\n"
 "   --serv_ip      Provide the server IP to protect\r\n"
-"   --myip         You're IP to whitlist\r\n"
+"   --myip         Your IP to whitlist\r\n"
 "   --debug        Enable debug mode\r\n";
 
 // Fn Decl
@@ -21,6 +26,9 @@ public int entry(int argc, string argv[])
     init_mem();
     firewall_t fw = init_firewall(NULL, 1);
     toggle_protection(fw);
+
+    if(array_contains_str((array)__ARGV__, "--help"))
+        println(HELP_LIST), __exit(0);
 
     int pos = 0;
     if((pos = array_contains_str((array)__ARGV__, "--debug")) > -1)
