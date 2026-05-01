@@ -1,11 +1,14 @@
 .PHONY: all
 
-all: dependencies install
+all: install build
 
 dependencies:
 	sudo apt install iptables -y
     sudo apt install conntrack -y
+	git clone https://github.com/FlatStdlib/Stdlib.git
+	git clone https://github.com/FlatStdlib/fsl.git
+	cd Stdlib && sudo make && cd .
+	rm -r ../Stdlib ../fsl
 
-install:
-	ls /usr/lib/libfsl.a &>1 /dev/null && echo "FSL IS INSTALLED" || echo $(git clone https://github.com/FlatStdlib/Stdlib.git && git clone https://github.com/FlatStdlib/fsl.git; cd Stdlib && sudo make && cd .; rm -r ../Stdlib ../fsl ../1)
+build:
 	fsl --output t fw.c src/*.c --cflags -ggdb
