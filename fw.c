@@ -56,13 +56,13 @@ public fn term_cli()
     char INPUT[1024] = {0};
     while(1)
     {
-        print("> ");
+        print("[LLFW] $ ");
         int bytes = get_input(INPUT, 1023);
         if(bytes <= 0)
             continue;
 
         if(str_cmp(INPUT, "help")) {
-            println("working");
+            println(HELP_LIST);
         } else if(str_cmp(INPUT, "geo")) {
             println("Working 2");
         } else if(mem_cmp(INPUT, "q", 1)) {
