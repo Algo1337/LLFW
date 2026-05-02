@@ -22,7 +22,7 @@ public fn thr__test(thread *arg)
 
 int entry()
 {
-	t = create_thread((handler_t)_test, NULL, 0);
+	t = create_thread((handler_t)thr__test, NULL, 0);
 
 	thread * p = allocate(0, sizeof(thread));
 	mem_cpy(p, &t, sizeof(thread));
