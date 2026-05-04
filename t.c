@@ -9,35 +9,34 @@
 
 thread t;
 
-public fn thr__test(thread *arg)
+public fn thr__test(char *buff)
 {
-	print("Running Status: "), printi(arg->running), println(NULL);
-	struct sleep_t tt = { 5, 0 };
-	__syscall__((long)&tt, 0, 0, 0, 0, 0, _SYS_NANOSLEEP);
+	print(buff), print(" > "), println(FAG);
 
-	arg->running = 0;
-	thread_kill(arg);
-	println("Exiting thread...");
+	//__syscall__(
+	//	(long)&((struct sleep_t){10, 0}), 0, 0, 0, 0, 0, _SYS_NANOSLEEP
+	//);
+
+	print(buff), print(" > "), println(FAG);
 }
 
 int entry()
 {
-	t = create_thread((handler_t)thr__test, NULL, 0);
+	FAG = str_dup("dick");
+	t = create_thread((handler_t)thr__test, FAG, 0);
 
-	thread * p = allocate(0, sizeof(thread));
-	mem_cpy(p, &t, sizeof(thread));
+	thread * p = to_heap(&t, sizeof(thread));
 
-	p->arguments = p;
-
-	struct sleep_t tt = { 1, 0 };
+	struct sleep_t tt = { 2, 0 };
 	run_thread((thread *)p, 0);
 	for(int i = 0; p->running != 0 && i != 10; i++) {
 		__syscall__((long)&tt, 0, 0, 0, 0, 0, _SYS_NANOSLEEP);
-		print("Waiting\r");
+		memzero(FAG, 100);
+		mem_cpy(FAG, "skid", 4);
+		//_printf("[%d] Waiting\r", (void *)&i);
 	}
 
 	//thread_kill(p);
-	println(NULL);
-	println("Done          ");
+	println("\nDone          ");
 	return 0;
 }
