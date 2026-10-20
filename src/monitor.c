@@ -3,148 +3,152 @@
 
 public fn monitor(firewall_t fw)
 {
+    struct sleep_t last = get_time_now();
     fw->running = 1;
 
     string data = _EXTERNAL_;
     while(fw->running != 0)
     {
+        struct sleep_t time = get_time_now();
+        if(time.sec - last.sec >= 1)
+        {
+            last.sec = time.sec;
+            print("\r                             \r");
+            _printf("> PPS: %d", (ptr)&fw->pps);
+            fw->pps = 0;
+        }
+
         int bytes = __syscall__(fw->socket->fd, (long)data, fw->socket->buff_len, -1, -1, -1, _SYS_READ);
         if(bytes <= 0)
             continue;
 
-        parse_request(fw, data, bytes);
         fw->pps += bytes;
         fw->ticks++;
+
+        if(fw->pps > fw->max_pps)
+        {
+            print(" | Under Attack!");
+        }
+
+        req_t t;
+        if((t = parse_request(fw, data, bytes)) <= 0) {
+            continue;
+        }
+
+        // _printf("Protocol: %d | %s\n", (ptr)&t->protocol, t->src_ip);
+        req_Destruct(t);
     }
 }
 
 //
 HEAP_USED
 //
-public bool parse_request(firewall_t fw, unsigned char *buf, len_t len)
+public req_t parse_request(firewall_t fw, unsigned char *buf, len_t len)
 {
-    if (len < 14) return 0;
+    if (len < 14) return NULL;
 
     unsigned short proto = (buf[12] << 8) | buf[13];
 
-    if (proto != 0x0800) return 0;
-    if (len < 14 + 20) return 0;
+    if (proto != 0x0800) return NULL;
+    if (len < 14 + 20) return NULL;
 
     unsigned char *ip = buf + 14;
 
-    unsigned char ihl = ip[0] & 0x0F;
+    u8 ihl = ip[0] & 0x0F;
     int ip_header_len = ihl * 4;
 
-    unsigned int saddr =
-        (ip[12] << 24) | (ip[13] << 16) |
-        (ip[14] << 8)  | (ip[15]);
-
-    unsigned int daddr =
-        (ip[16] << 24) | (ip[17] << 16) |
-        (ip[18] << 8)  | (ip[19]);
+    u32 saddr = (ip[12] << 24) | (ip[13] << 16) | (ip[14] << 8)  | (ip[15]);
+    u32 daddr = (ip[16] << 24) | (ip[17] << 16) | (ip[18] << 8)  | (ip[19]);
 
 
     /* TODO; Move protection into a new function */
-    conn_t c;
-    int v = check_request(fw, c, buf);
-    if(v == 2) // Whitlisted
-        return 0;
-
-    if(v == 1) // Suspecious Connection
-    {
-        return 0;
-    }
-
-    _printf("\x1b[32mNew Request, Byte Size: %d\x1b[39m\n", (void *)&len);
-    print("=== IP ===\nSrc: "), print_ip(saddr);
-    print("\nDst: "), print_ip(daddr);
-    print("\n");
-
-    unsigned char protocol = ip[9];
-    if(protocol == 1) {
-        unsigned char *icmp = buf + 14 + ip_header_len;
-
-        unsigned char type = icmp[0];
-        unsigned char code = icmp[1];
-
-        print("\x1b[33m=== ICMP ===\x1b[39m\n");
-
-        print("Type: "), printi(type);
-        print(" | Code: "), printi(code), println(NULL);
-
-        print("\n");
-    } else if(protocol == 6) {
-        unsigned char *tcp = buf + 14 + ip_header_len;
-
-        unsigned short sport = (tcp[0] << 8) | tcp[1];
-        unsigned short dport = (tcp[2] << 8) | tcp[3];
-        unsigned char flags = tcp[13];
-
-        print("\x1b[31m=== TCP ===\x1b[39m\nSrc Port: "), printi(sport), print(" | Dst Port: "), printi(dport), println(NULL);
-
-        int syn = (flags & 0x02) != 0;
-        int ack = (flags & 0x10) != 0;
-        int fin = (flags & 0x01) != 0;
-        _printf("Flags: SYN = %d | ACK = %d | FIN = %d\n", (void *)&syn, (void *)&ack, (void *)&fin);
-    }
-    else if(protocol == 17) {
-        unsigned char *udp = buf + 14 + ip_header_len;
-
-        unsigned short sport = (udp[0] << 8) | udp[1];
-        unsigned short dport = (udp[2] << 8) | udp[3];
-
-        println("\x1b[32m=== UDP ===\x1b[39m\n");
-        print("Src Port: "), printi(sport), print(" | Dst Port: "), printi(dport), println(NULL);
-    }
-
-    // char byte[4];
-    // println("\x1b[32mRequest Info\x1b[39m");
-    // for (size_t i = 0; i < len; i++) {
-    //     byte_to_hex(buf[i], byte); 
-    //     _printf("%s ", byte);
-    // }
-    // println("\n");
-
-    return 1;
-}
-
-public bool check_request(firewall_t fw, conn_t c, string buff)
-{
-    u32 *ip = (u32 *)buff + 14;
-
+    request c;
+    c.protocol = 0;
     /*
         for incoming request, the format is:
             - Inbound (sip): Client IP
             - Outbount (dip): Device IP
     */
-    string sip = ip_to_str((ip[12] << 24) | (ip[13] << 16) | (ip[14] << 8)  | (ip[15]));
-    string dip = ip_to_str((ip[16] << 24) | (ip[17] << 16) | (ip[18] << 8)  | (ip[19]));
+    c.src_ip = ip_to_str((ip[12] << 24) | (ip[13] << 16) | (ip[14] << 8)  | (ip[15]));
+    c.dest_ip = ip_to_str((ip[16] << 24) | (ip[17] << 16) | (ip[18] << 8)  | (ip[19]));
 
-    if(!sip || !dip)
+    if(!c.src_ip || !c.dest_ip)
+        return NULL;
+
+    c.src_ip[17] = '\0';
+    c.dest_ip[17] = '\0';
+
+    unsigned char protocol = ip[9];
+    if(protocol == 1) {
+        c.protocol = ICMP;
+        unsigned char *icmp = buf + 14 + ip_header_len;
+
+        /* used ; dunno yet */
+        unsigned char type = icmp[0];
+        unsigned char code = icmp[1];
+
+    } else if(protocol == 6) {
+        c.protocol = TCP;
+        unsigned char *tcp = buf + 14 + ip_header_len;
+
+        c.src_port = (tcp[0] << 8) | tcp[1];
+        c.dest_port = (tcp[2] << 8) | tcp[3];
+        c.flags = tcp[13];
+
+        /* unused */
+        int syn = (c.flags & 0x02) != 0;
+        int ack = (c.flags & 0x10) != 0;
+        int fin = (c.flags & 0x01) != 0;
+    }
+    else if(protocol == 17) {
+        c.protocol = UDP;
+        unsigned char *udp = buf + 14 + ip_header_len;
+
+        c.src_port = (udp[0] << 8) | udp[1];
+        c.dest_port = (udp[2] << 8) | udp[3];
+    }
+
+    if(len > 0) {
+        c.length = len;
+        c.buffer = allocate(0, len + 1);
+        mem_cpy(c.buffer, buf, len);
+    }
+
+    return to_heap(&c, sizeof(request));;
+}
+
+public bool check_request(firewall_t fw, req_t c, string buff)
+{
+    u32 *ip = (u32 *)buff + 14;
+
+    if(!c->src_ip || !c->dest_ip) {
         return 0;
+    }
 
     /* Skip whitlisted/protected IPs */
-    if (fw->system_ip && !str_cmp(fw->system_ip, dip)) {
+    if (fw->system_ip && !str_cmp(fw->system_ip, c->dest_ip)) {
         println("Request: Incoming (to server)");
-    } else if (fw->system_ip && !str_cmp(fw->system_ip, sip)) {
+    } else if (fw->system_ip && !str_cmp(fw->system_ip, c->src_ip)) {
         println("Request: Outgoing (from server)");
     }
 
-    if(is_ip_whitlisted(fw, dip) > -1)
+    if(is_ip_whitlisted(fw, c->dest_ip) > -1 || (fw->user_ip && str_cmp(c->dest_ip, fw->user_ip))) {
         return 2;
+    }
 
-    if(!fw->enable_protection)
+    if(!fw->enable_protection) {
         return -1;
+    }
 
-    if(is_ip_blacklisted(fw, sip) > -1)
+    if(is_ip_blacklisted(fw, c->src_ip) > -1)
     {
         /* ENSURE IP IS NOT ALREADY BLOCKED (fw->blocked) */
-        if(array_contains_str(fw->blocked, sip) > -1)
+        if(array_contains_str(fw->blocked, c->src_ip) > -1)
         {
 
         }
 
-        _printf("IP Blocked: %s\n", dip)
+        _printf("IP Blocked: %s\n", c->dest_ip)
         return 1;
     }
 
@@ -157,8 +161,19 @@ public bool check_request(firewall_t fw, conn_t c, string buff)
 
     // Validate further data...
 
-    pfree(sip, 1);
-    pfree(dip, 1);
-
     return 0;
+}
+
+public fn req_Destruct(req_t r)
+{
+    if(r->src_ip)
+        _pfree(r->src_ip);
+
+    if(r->dest_ip)
+        _pfree(r->dest_ip);
+
+    if(r->buffer)
+        _pfree(r->buffer);
+
+    _pfree(r);
 }

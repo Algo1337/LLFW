@@ -37,19 +37,29 @@ struct ip_hdr {
 
 #define POLLIN 0x001
 
+typedef enum
+{
+    ICMP,
+    UDP,
+    TCP
+} protocol_t;
+
 typedef struct
 {
+    protocol_t  protocol;
     string      src_ip;
     int         src_port;
     string      dest_ip;
     int         dest_port;
+    int         flags;
 
     string      buffer;
     len_t       length;
-} connection;
+} request;
 
-typedef connection *conn_t;
-typedef connection **conn_arr_t;
+typedef request *req_t;
+typedef request **req_arr_t;
+
 typedef struct 
 {
     /* Raw Socket Info */
@@ -57,6 +67,7 @@ typedef struct
 
     /* Protection Info */
     string      system_ip;       // System IP (Whitlisted)
+    string      user_ip;
 
     array       whitlisted;
     array       blacklisted;
@@ -73,6 +84,8 @@ typedef struct
     int         online;
     int         under_attack;
 
+    int         max_pps;
+    
     /* Max Connection Acceptable System-Wide */
     int         cons_acceptable;
 
@@ -116,10 +129,12 @@ public fn           firewall_destruct(firewall_t fw);
 
 /* monitor.c */
 public fn           monitor(firewall_t fw);
-public bool         parse_request(firewall_t fw, unsigned char *buf, len_t len);
-public bool         check_request(firewall_t fw, conn_t c, string buff);
+public req_t        parse_request(firewall_t fw, unsigned char *buf, len_t len);
+public bool         check_request(firewall_t fw, req_t c, string buff);
+public fn           req_Destruct(req_t r);
 
 /* utils.c */
 HEAP_USED
+public struct sleep_t      get_time_now();
 public string       ip_to_str(unsigned int ip);
 public fn           print_ip(unsigned int ip);
