@@ -60,6 +60,27 @@ typedef struct
 typedef request *req_t;
 typedef request **req_arr_t;
 
+typedef struct
+{
+    string  name;
+    int     enable_protection;
+    int     auto_reset_ips;
+
+    array   whitelisted;        // Whitelisted Cons
+    array   blacklisted;        // Blacklisted Cons
+
+    array   rules;
+    array   services;
+    
+    i32     max_pps;            // Max PPS
+    i32     max_cons;           // Global Max Cons
+    i32     max_cons_per_ip;    // Max Cons Per IP
+    i32     max_cons_per_port;  // Max Cons Per Port
+} _config;
+
+typedef _config cfg_t;
+
+
 typedef struct 
 {
     /* Raw Socket Info */
@@ -69,51 +90,20 @@ typedef struct
     string      system_ip;       // System IP (Whitlisted)
     string      user_ip;
 
-    array       whitlisted;
-    array       blacklisted;
+    _config     Config;
+    array       blocked;        // Connection blocked during runtime
 
 
     /* Monitor Stats */
+    int         max_pps;
     int         ticks;
     int         pps;
 
     /* Monitor Settings / Adjustable Protection Settings */
-    int         enable_protection;
-    int         auto_reset_ips;
-    int         running;
+    int         capture_running;
+    int         monitor_running;
     int         online;
     int         under_attack;
-
-    int         max_pps;
-    
-    /* Max Connection Acceptable System-Wide */
-    int         cons_acceptable;
-
-    /* Default; 2 Connections for IP */
-    int         max_cons_per_ip;
-
-    /*
-        Depending on the apps hosted on the system, This is to be adjusted to user(s)
-        and//or how app(s) works.
-
-        Example: 
-            for Simple API Request(s), the max connnections per port count can stay low since it doesnt hold connections for to long.
-            Stay-alive apps will need this adjusted
-    */
-    int         max_cons_per_port;
-    
-    /*
-        This array stores all suspecious IPs currently temporarily blocked during attack(s)
-
-        IPs are to be released/unblocked if 'auto_reset_ips' is enabled after the
-        attack(s) are done and server is no longer under load
-
-        List of suspeciousness:
-            - Connection Spams
-            - High Packet Count Spams ( Including payloads randomization )
-            - Over the count of 'max_cons_per_ip'
-    */
-    array       blocked;
 } firewall;
 
 typedef firewall *firewall_t;
@@ -127,14 +117,18 @@ public bool         is_ip_whitlisted(firewall_t fw, string ip);
 public bool         is_ip_blacklisted(firewall_t fw, string ip);
 public fn           firewall_destruct(firewall_t fw);
 
-/* monitor.c */
-public fn           monitor(firewall_t fw);
+/* capture.c */
+public fn           capture(/* firewall_t fw */);
 public req_t        parse_request(firewall_t fw, unsigned char *buf, len_t len);
 public bool         check_request(firewall_t fw, req_t c, string buff);
 public fn           req_Destruct(req_t r);
 
+/* monitor */
+public fn           monitor();
+
 /* utils.c */
-HEAP_USED
+public string read_file(string filename);
 public struct sleep_t      get_time_now();
+HEAP_USED
 public string       ip_to_str(unsigned int ip);
 public fn           print_ip(unsigned int ip);

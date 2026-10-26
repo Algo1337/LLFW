@@ -12,7 +12,7 @@ public string HELP_LIST = "CyberShield | Version: v8.2 | By: @Algo1337\r\n"
 "   --debug        Enable debug mode\r\n";
 
 // Fn Decl
-public fn term_cli();
+public fn term_cli(firewall_t fw);
 
 // Globals
 thread cli_thr;
@@ -44,7 +44,7 @@ public int entry(int argc, string argv[])
     }
 
     uninit_mem();
-    set_heap_sz(526870912);
+    set_heap_sz(_HEAP_PAGE_ * 5);
     init_mem();
     firewall_t fw = init_firewall(NULL, 1);
     toggle_protection(fw);
@@ -52,16 +52,18 @@ public int entry(int argc, string argv[])
     fw->system_ip = SYSTEM_IP;
     fw->user_ip = str_dup(USER_IP);
     fw->max_pps = PPS;
-    _printf("Socket: %d\n", (void *)&fw->socket->fd);
 
-    monitor(fw);
-    // run_thread(monitor, fw);
+    print("\n\x1b[?25l\x1b[?0c");
+    run_thread(capture, fw);
+    run_thread(monitor, fw);
 
-    // term_cli();
+    term_cli(fw);
+    print("\x1b[?25h\x1b[?0c");
     return 0;
 }
 
-public fn term_cli()
+
+public fn term_cli(firewall_t fw)
 {
     char INPUT[1024] = {0};
     while(1)
@@ -73,8 +75,8 @@ public fn term_cli()
 
         if(str_cmp(INPUT, "help")) {
             println(HELP_LIST);
-        } else if(str_cmp(INPUT, "geo")) {
-            println("Working 2");
+        } else if(mem_cmp(INPUT, "pps", 3)) {
+            _printf("PPS: %d\n", (ptr)&fw->pps);
         } else if(mem_cmp(INPUT, "q", 1)) {
             __exit(0);
         }

@@ -1,5 +1,28 @@
 #include "init.h"
 
+public string read_file(string filename)
+{
+	if(!filename)
+		return NULL;
+
+	fd_t file = open_file(filename, 0, 0);
+	if(!file)
+		return NULL;
+
+	int sz = file_content_size(file);
+	if(sz == 0)
+		return NULL;
+
+	string buffer = allocate(0, sz + 1);
+	int bytes = file_read(file, buffer, sz);
+	
+	if(bytes > 0)
+		return buffer;
+
+	_pfree(buffer);
+	return NULL;
+}
+
 public struct sleep_t get_time_now()
 {
     struct sleep_t dt = {0, 0};
