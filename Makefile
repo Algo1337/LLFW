@@ -1,6 +1,6 @@
 .PHONY: all
 
-all: install build
+all: build clean
 
 dependency:
 	sudo apt install iptables -y
@@ -11,4 +11,9 @@ dependency:
 	rm -r ../Stdlib ../fsl
 
 build:
-	fsl --output t fw.c src/*.c --cflags -ggdb
+	gcc fw.c src/*.c -c -ffunction-sections -fdata-sections -nostdlib -ffreestanding -ggdb
+	ld --no-relax --gc-sections -o t *.o /usr/lib/loader.o /usr/lib/libfsl.a
+# 	fsl --output t fw.c src/*.c --cflags -ggdb
+
+clean:
+	rm -rf *.o

@@ -4,7 +4,7 @@ public firewall_t init_firewall(string ip, int protection)
 {
     firewall_t fw = allocate(0, sizeof(firewall));
     fw->system_ip = ip ? str_dup(ip) : NULL;
-    fw->enable_protection = protection;
+    fw->capture_running = protection;
 
     fw->blacklisted = init_array();
     fw->whitlisted = init_array();
@@ -22,8 +22,9 @@ public firewall_t init_firewall(string ip, int protection)
     return fw;
 }
 
+/* TODO; wrong variable */
 public fn toggle_protection(firewall_t fw)
-{ fw->enable_protection = fw->enable_protection ? 0 : 1; }
+{ fw->capture_running = fw->capture_running ? 0 : 1; }
 
 public bool whitlist_ip(firewall_t fw, string ip)
 {

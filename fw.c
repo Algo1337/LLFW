@@ -4,7 +4,7 @@ public string BANNER = "╔═╗╦ ╦╔╗ ╔═╗╦═╗  ╔═╗╦ 
 "║  ╚╦╝╠╩╗║╣ ╠╦╝  ╚═╗╠═╣║║╣ ║   ║║\r\n"
 "╚═╝ ╩ ╚═╝╚═╝╩╚═  ╚═╝╩ ╩╩╚═╝╩═╝═╩╝\r\n";
 
-public string HELP_LIST = "CyberShield | Version: v8.2 | By: @Algo1337"
+public string HELP_LIST = "CyberShield | Version: v8.2 | By: @Algo1337\r\n"
 "   Flag           Description\r\n"
 "______________________________________\r\n"
 "   --serv_ip      Provide the server IP to protect\r\n"
@@ -12,61 +12,72 @@ public string HELP_LIST = "CyberShield | Version: v8.2 | By: @Algo1337"
 "   --debug        Enable debug mode\r\n";
 
 // Fn Decl
-public fn term_cli();
+public fn term_cli(firewall_t fw);
 
 // Globals
 thread cli_thr;
 extern int __ARGC__;
 extern string __ARGV__[80];
 
+
+char SYSTEM_IP[255];
+char USER_IP[255];
+int PPS = 0;
 public int entry(int argc, string argv[])
 {
+    for(int i = 0; i < __ARGC__; i++)
+    {
+        if(str_cmp(__ARGV__[i], "--help"))
+            print(BANNER), print(HELP_LIST), __exit(0);
+
+        if(str_cmp(__ARGV__[i], "--debug"))
+            toggle_debug_mode();
+        
+        if(str_cmp(__ARGV__[i], "--serv_ip"))
+            mem_cpy(SYSTEM_IP, __ARGV__[i + 1], _str_len(__ARGV__[i + 1]));
+
+        if(str_cmp(__ARGV__[i], "--myip"))
+            mem_cpy(USER_IP, __ARGV__[i + 1], _str_len(__ARGV__[i + 1]));
+
+        if(str_cmp(__ARGV__[i], "--pps"))
+            PPS = str_to_int(__ARGV__[i + 1]);
+    }
+
     uninit_mem();
-    set_heap_sz(526870912);
+    set_heap_sz(_HEAP_PAGE_ * 5);
     init_mem();
     firewall_t fw = init_firewall(NULL, 1);
     toggle_protection(fw);
 
-    if(array_contains_str((array)__ARGV__, "--help") > -1)
-        println(HELP_LIST), __exit(0);
+    fw->system_ip = SYSTEM_IP;
+    fw->user_ip = str_dup(USER_IP);
+    fw->max_pps = PPS;
 
-    int pos = 0;
-    if((pos = array_contains_str((array)__ARGV__, "--debug")) > -1)
-        toggle_debug_mode();
-    
-    if((pos = array_contains_str((array)__ARGV__, "--serv_ip")) > -1)
-        fw->system_ip = str_dup(__ARGV__[pos + 1]);
+    print("\n\x1b[?25l\x1b[?0c");
+    run_thread(capture, fw);
+    run_thread(monitor, fw);
 
-    if((pos = array_contains_str((array)__ARGV__, "--myip")) > -1)
-        whitlist_ip(fw, __ARGV__[pos + 1]);
-
-    printi(argc), println(NULL);
-
-    _printf("Socket: %d\n", (void *)&fw->socket->fd);
-
-    cli_thr = create_thread((handler_t)monitor, fw, 0);
-    start_thread(cli_thr);
-
-    term_cli();
+    term_cli(fw);
+    print("\x1b[?25h\x1b[?0c");
     return 0;
 }
 
-public fn term_cli()
+
+public fn term_cli(firewall_t fw)
 {
     char INPUT[1024] = {0};
     while(1)
     {
         print("[LLFW] $ ");
-        int bytes = get_input(INPUT, 1023);
+        int bytes = __syscall__(0, (long)INPUT, 1024, -1, -1, -1, _SYS_READ);
         if(bytes <= 0)
             continue;
 
         if(str_cmp(INPUT, "help")) {
             println(HELP_LIST);
-        } else if(str_cmp(INPUT, "geo")) {
-            println("Working 2");
+        } else if(mem_cmp(INPUT, "pps", 3)) {
+            _printf("PPS: %d\n", (ptr)&fw->pps);
         } else if(mem_cmp(INPUT, "q", 1)) {
-            thread_kill(&cli_thr);
             __exit(0);
         }
     }
