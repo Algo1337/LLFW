@@ -1,5 +1,17 @@
 #include "src/init.h"
 
+public cfg_t init_config()
+{		
+	_config *cfg = allocate(0, sizeof(_config));
+
+	cfg->whitelisted = init_array();
+	cfg->blacklisted = init_array();
+	cfg->rules = init_array();
+	cfg->services = init_array();
+
+	return cfg;
+}
+
 char filename[100];
 public i8 entry(int argc, string argv[])
 {
@@ -11,24 +23,20 @@ public i8 entry(int argc, string argv[])
 
 	_printf("\x1b[32m[ + ]\x1b[39m Retrieving Config Settings: %s.....!\r\n", argv[1]);
 	mem_cpy(filename, argv[1], 30);
+
 	uninit_mem();
 	set_heap_sz(_HEAP_PAGE_ * 5);
 	init_mem();
-	string data = read_file(filename);
 
-	i32 line_count = 0;
-	sArr lines = split_string(data, '\n', &line_count);
+	string data 	= read_file(filename);
+	i32 line_count 	= 0;
+	sArr lines 		= split_string(data, '\n', &line_count);
 
 	if(!lines)
 		fsl_panic("Unable to split");
 
 		
-	_config *cfg = allocate(0, sizeof(_config));
-
-	cfg->whitelisted = init_array();
-	cfg->blacklisted = init_array();
-	cfg->rules = init_array();
-	cfg->services = init_array();
+	cfg_t cfg = init_config();
 
 	char block[255];
 	for(int i = 0; i < line_count; i++)
@@ -141,7 +149,6 @@ public i8 entry(int argc, string argv[])
 	}
 
 	pfree_array((array)lines);
-
 	println("\x1b[32m[ + ]\x1b[39m Displaying Settings Info: ");
 	_printf("Protection Enabled: %d\nMax PPS: %d\nMax Cons: %d\nMax Con Per IP: %d\nMax Con Per Port: %d\n", 
 		(ptr)&cfg->enable_protection,

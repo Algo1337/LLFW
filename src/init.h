@@ -60,7 +60,6 @@ typedef struct
 
 typedef _service *srvc;
 
-
 typedef struct
 {
     protocol_t  protocol;
@@ -96,7 +95,7 @@ typedef struct
     string  discord_url;
 } _config;
 
-typedef _config cfg_t;
+typedef _config *cfg_t;
 
 
 typedef struct 
