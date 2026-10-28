@@ -16,7 +16,7 @@ public i8 entry(int argc, string argv[])
 		
 	_config *cfg = allocate(0, sizeof(_config));
 
-	cfg->whitelist = init_array();
+	cfg->whitelisted = init_array();
 	cfg->blacklisted = init_array();
 	cfg->rules = init_array();
 	cfg->services = init_array();
