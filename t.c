@@ -13,7 +13,11 @@ public i8 entry(int argc, string argv[])
 	if(!lines)
 		fsl_panic("Unable to split");
 
+		
 	_config *cfg = allocate(0, sizeof(_config));
+
+	cfg->whitelist = init_array();
+	cfg->blacklisted = init_array();
 	cfg->rules = init_array();
 	cfg->services = init_array();
 
@@ -39,7 +43,6 @@ public i8 entry(int argc, string argv[])
 			trim_char_idx(lines[i], len - 2);
 			trim_char_idx(lines[i], 0);
 			trim_char_idx(lines[i], 0);
-
 			
 			mem_cpy(block, lines[i], len - 4);
 			_printf("Block -> %d:'%s'\n", (ptr)&len, block);
