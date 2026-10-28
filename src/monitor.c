@@ -17,7 +17,8 @@ public fn monitor()
     init_mem();
     struct sleep_t last = get_time_now();
 
-    while(1)
+    fw->capture_running = 1;
+    while(fw->capture_running != 0)
     {
         struct sleep_t time = get_time_now();
         if(time.sec - last.sec >= 1)
@@ -28,5 +29,6 @@ public fn monitor()
         }
     }
 
+    fw->capture_running = 0;
     uninit_mem();
 }

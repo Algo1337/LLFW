@@ -162,17 +162,3 @@ public bool check_request(firewall_t fw, req_t c, string buff)
 
     return 0;
 }
-
-public fn req_Destruct(req_t r)
-{
-    if(r->src_ip)
-        _pfree(r->src_ip);
-
-    if(r->dest_ip)
-        _pfree(r->dest_ip);
-
-    if(r->buffer)
-        _pfree(r->buffer);
-
-    _pfree(r);
-}

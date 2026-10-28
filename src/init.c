@@ -1,10 +1,12 @@
 #include "init.h"
 
+firewall_t _FW_ = NULL;
 public firewall_t init_firewall(string ip, int protection)
 {
     firewall_t fw = allocate(0, sizeof(firewall));
     fw->system_ip = ip ? str_dup(ip) : NULL;
     fw->capture_running = protection;
+    fw->monitor_running = 0;
 
     fw->blacklisted = init_array();
     fw->whitlisted = init_array();
@@ -19,6 +21,7 @@ public firewall_t init_firewall(string ip, int protection)
     mem_set(&fw->socket->addr, 0, sizeof(addr_in));
     fw->socket->buff_len = 1024;
 
+    _FW_ = fw;
     return fw;
 }
 
@@ -90,13 +93,17 @@ public fn firewall_destruct(firewall_t fw)
     if(!fw)
         return;
 
-    __syscall__(fw->socket->fd, -1, -1, -1, -1, -1, _SYS_CLOSE);
+    if(fw->socket->fd > 0)
+        __syscall__(fw->socket->fd, -1, -1, -1, -1, -1, _SYS_CLOSE);
 
-    pfree(fw->system_ip, 1);
+    if(fw->system_ip)
+        pfree(fw->system_ip, 1);
 
     if(fw->whitlisted)
         pfree_array((array)fw->whitlisted);
 
     if(fw->blacklisted)
         pfree_array((array)fw->blacklisted);
+
+    _pfree(fw);
 }

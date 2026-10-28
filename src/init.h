@@ -79,6 +79,7 @@ typedef request **req_arr_t;
 typedef struct
 {
     string  name;
+    string  dir;
     int     enable_protection;  // Adds rules
 
     array   whitelisted;        // Whitelisted Cons
@@ -128,6 +129,8 @@ typedef struct
 
 typedef firewall *firewall_t;
 
+extern firewall_t _FW_;
+
 /* init.c */
 public firewall_t   init_firewall(string ip, int protection);
 public fn           toggle_protection(firewall_t fw);
@@ -137,13 +140,24 @@ public bool         is_ip_whitlisted(firewall_t fw, string ip);
 public bool         is_ip_blacklisted(firewall_t fw, string ip);
 public fn           firewall_destruct(firewall_t fw);
 
+/* config */
+public cfg_t        init_config(string dir);
+public bool         retrive_theme(cfg_t c);
+public bool         parse_settings(cfg_t cfg, sArr lines, int line_count);
+public fn           cfg_Destruct(cfg_t c);
+
 /* capture.c */
 public fn           capture(/* firewall_t fw */);
 public req_t        parse_request(firewall_t fw, unsigned char *buf, len_t len);
 public bool         check_request(firewall_t fw, req_t c, string buff);
 public fn           req_Destruct(req_t r);
 
+/* request.c */
+public req_t        init_request(protocol_t protocol, string sip, i32 sport, string dip, i32 dport);
+public fn           req_Destruct(req_t r);
+
 /* monitor */
+public fn           set_default_display(firewall_t fw);
 public fn           monitor();
 
 /* utils.c */

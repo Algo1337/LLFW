@@ -59,7 +59,3 @@ public fn print_ip(unsigned int ip)
     printi(b[2]); print(".");
     printi(b[3]);
 }
-
-public string create_drop_cmd(string ip) {
-    string cmd = allocate(0, 10);
-}
