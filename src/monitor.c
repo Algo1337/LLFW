@@ -23,8 +23,8 @@ public fn monitor()
         if(time.sec - last.sec >= 1)
         {
             last.sec = time.sec;
-            print("\x1b[7;81f         ");
-            _printf("\x1b[7;81f%d", (ptr)&fw->pps);
+            print("\x1b[3;70f         ");
+            _printf("\x1b[3;70f%d", (ptr)&fw->pps);
         }
     }
 
