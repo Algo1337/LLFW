@@ -46,6 +46,23 @@ typedef enum
 
 typedef struct
 {
+    string      name;
+    int         port;
+    protocol_t  protocol;
+
+    string      restart_cmd;
+    int         max_cons;
+    int         max_pps;
+
+    int         filter;
+    int         drop;
+} _service;
+
+typedef _service *srvc;
+
+
+typedef struct
+{
     protocol_t  protocol;
     string      src_ip;
     int         src_port;

@@ -1,11 +1,20 @@
 #include "src/init.h"
 
+char filename[100];
 public i8 entry(int argc, string argv[])
 {
+	if(argc < 2)
+	{
+		_printf("Invalid arguments provided!\nUsage: %s <config_file>", argv[0]);
+		return 1;
+	}
+
+	_printf("\x1b[32m[ + ]\x1b[39m Retrieving Config Settings: %s.....!\r\n", argv[1]);
+	mem_cpy(filename, argv[1], 30);
 	uninit_mem();
 	set_heap_sz(_HEAP_PAGE_ * 5);
 	init_mem();
-	string data = read_file("assets/config.cfg");
+	string data = read_file(filename);
 
 	i32 line_count = 0;
 	sArr lines = split_string(data, '\n', &line_count);
@@ -45,7 +54,7 @@ public i8 entry(int argc, string argv[])
 			trim_char_idx(lines[i], 0);
 			
 			mem_cpy(block, lines[i], len - 4);
-			_printf("Block -> %d:'%s'\n", (ptr)&len, block);
+			_printf("\x1b[32m[ + ]\x1b[39m Parsing: %s.....!\n", block);
 			continue;
 		}
 
@@ -94,28 +103,60 @@ public i8 entry(int argc, string argv[])
 				cfg->discord_url = str_dup(url);
 			}
 
-			_printf("Key: %s | Value: %s\n", _args[0], _args[1]);
 		} else if(str_cmp(block, "RULES")) {
-			_printf("Rule: %s\n", lines[i]);
+			replace_char(lines[i], '\r', '\0');
+			replace_char(lines[i], '\n', '\0');
+			
 			cfg->rules = array_append(cfg->rules, lines[i]);
 		} else if(str_cmp(block, "PROTECTED_IPS")) {
 			if(is_empty(lines[i]))
 				continue;
 
+			replace_char(lines[i], '\r', '\0');
+			replace_char(lines[i], '\n', '\0');
 			if(!validate_ip(lines[i]))
 				fsl_panic("Invalid IP");
 
-			_printf("IP: '%s'\n", lines[i]);
 			cfg->whitelisted = array_append(cfg->whitelisted, lines[i]);
 		} else if(str_cmp(block, "SERVICES")) {
-			_printf("SERVICE: %s\n", lines[i]);
-			cfg->services = array_append(cfg->services, lines[i]);
+			replace_char(lines[i], '\r', '\0');
+			replace_char(lines[i], '\n', '\0');
+
+			int _argc = 0;
+			sArr _args = split_string(lines[i], ';', &_argc);
+			_service s; 
+			s.name = _args[1];
+			s.port = str_to_int(_args[0] + 1);
+			s.protocol = 0;
+			s.restart_cmd = _args[3];
+			s.max_cons = str_to_int(_args[4]);
+			s.max_pps = str_to_int(_args[5]);
+			s.filter = str_to_int(_args[6]);
+			s.drop = str_to_int(_args[7]);
+
+			srvc n = to_heap(&s, sizeof(_service));
+			cfg->services = array_append(cfg->services, n);
 		}
 
 	}
 
 	pfree_array((array)lines);
 
-	_printf("%d %d %d %d %d\n", (ptr)&cfg->enable_protection, (ptr)&cfg->max_pps, (ptr)&cfg->max_cons, (ptr)&cfg->max_cons_per_ip, (ptr)&cfg->max_cons_per_port);
+	println("\x1b[32m[ + ]\x1b[39m Displaying Settings Info: ");
+	_printf("Protection Enabled: %d\nMax PPS: %d\nMax Cons: %d\nMax Con Per IP: %d\nMax Con Per Port: %d\n", 
+		(ptr)&cfg->enable_protection,
+		(ptr)&cfg->max_pps,
+		(ptr)&cfg->max_cons,
+		(ptr)&cfg->max_cons_per_ip,
+		(ptr)&cfg->max_cons_per_port
+	);
+
+	/* Services to protect */
+	println("\x1b[32m[ + ]\x1b[39m Protected Services");
+	for(int i = 0; cfg->services[i] != NULL; i++)
+	{
+		srvc t = (srvc)cfg->services[i];
+		_printf("Service: %s | Max PPS: %d\n", t->name, (ptr)&t->max_pps);
+	}
 	return 0;
 }
